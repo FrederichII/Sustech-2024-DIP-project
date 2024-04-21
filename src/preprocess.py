@@ -61,19 +61,19 @@ def find_license_plate(img,rects):
 
 
 if __name__ == '__main__':
-    img = cv.imread('../image_test.jpg')
+    img = cv.imread('../image_test2.jpg')
     contours,rects = preprocess(img)
 
     # for i in range(len(rects)):
     #     box = cv.boxPoints(rects[i])
     #     box = np.int0(box)
     #     cv.drawContours(img, [box], 0, (0, 255, 0), 2)
-    box = cv.boxPoints(rects[8])
+    box = cv.boxPoints(rects[3])
     box = np.int0(box)
     cv.drawContours(img, [box], 0, (0, 255, 0), 2)
     # cv.drawContours(img, contours, -1, (0,255,0), thickness=None, lineType=None, hierarchy=None, maxLevel=None,offset=None)
     cv.imshow('img',img)
-    cv.imwrite('../image_test_processed.jpg',img)
+    cv.imwrite('../image_test2_processed.jpg',img)
     print(len(rects),len(rects[0]),len(rects[0][0]))
     cnt = 0
     for rect in rects:
