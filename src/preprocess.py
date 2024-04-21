@@ -1,5 +1,9 @@
-from PIL import Image, ImageDraw, ImageFont
 import os
+import cv2
+import freetype
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+
 
 
 provincelist = [
@@ -21,47 +25,31 @@ wordlist = [
     "6", "7", "8", "9"]
 
 # --- 绘制边界框
-
-
+# --- 绘制矩形框
 def DrawBox(im, box):
-    draw = ImageDraw.Draw(im)
-    draw.rectangle([tuple(box[0]), tuple(box[1])],  outline="#FFFFFF", width=3)
+    cv2.rectangle(im, tuple(box[0]), tuple(box[1]), (255, 255, 255), 3)
 
-# --- 绘制四个关键点
-
-
+# --- 绘制关键点
 def DrawPoint(im, points):
-
-    draw = ImageDraw.Draw(im)
-
     for p in points:
-        center = (p[0], p[1])
-        radius = 5
-        right = (center[0]+radius, center[1]+radius)
-        left = (center[0]-radius, center[1]-radius)
-        draw.ellipse((left, right), fill="#FF0000")
+        cv2.circle(im, (p[0], p[1]), 5, (0, 0, 255), -1)
 
 # --- 绘制车牌
-
-
 def DrawLabel(im, label):
+    im = Image.fromarray(cv2.cvtColor(im, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(im)
-   # draw.multiline_text((30,30), label.encode("utf-8"), fill="#FFFFFF")
-    font = ImageFont.truetype('simsun.ttc', 64)
-    draw.text((30, 30), label, font=font)
+    draw.text((30,30), label, font=ImageFont.truetype('msyh.ttc', 40), fill=(255,0,0))
+    im = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
+    return im
 
 # --- 图片可视化
-
-
 def ImgShow(imgpath, box, points, label):
-    # 打开图片
-    im = Image.open(imgpath)
+    im = cv2.imread(imgpath)
     DrawBox(im, box)
     DrawPoint(im, points)
-    DrawLabel(im, label)
-    # 显示图片
-    im.show()
-    im.save('result.jpg')
+    im = DrawLabel(im, label)
+    cv2.imshow('img', im)
+
 
 
 def get_license_info(imgpath):
@@ -95,14 +83,32 @@ def get_license_info(imgpath):
     # 车牌号
     label = province+''.join(words)
 
-    # --- 图片可视化
     information = {'imgname': imgname, 'box': box, 'points': points, 'label':label}
     return  information
 
+def get_ROI(imgpath, box):
+    img = cv2.imread(imgpath)
+    top_left, bottom_right = box[0], box[1]
+    left, top = min(top_left[0], bottom_right[0]), min(top_left[1], bottom_right[1])
+    right, bottom = max(top_left[0], bottom_right[0]), max(top_left[1], bottom_right[1])
+    # 提取矩形区域
+    cropped_image = img[top:bottom, left:right]
+
+    return cropped_image
 
 if __name__ == '__main__':
-    imgpath = 'D:/CCPD2019/ccpd_base/01-86_91-298&341_449&414-458&394_308&410_304&357_454&341-0_0_14_28_24_26_29-124-24.jpg'
+    imgpath = 'D:/CCPD2019/ccpd_base/01-90_87-240&501_441&563-437&567_237&561_230&490_430&496-0_0_2_12_32_26_26-180-20.jpg'
     information = get_license_info(imgpath)
-    [box, points, label] = [information.get('box'), information.get('points'), information.get('label')]
+    [imgname, box, points, label] = [information.get('imgname'), information.get('box'), information.get('points'), information.get('label')]
+    print(points)
+    print(label)
+    print(box)
+    print(imgname)
+    ROI = get_ROI(imgpath,box)
+
+    # 显示
     ImgShow(imgpath, box, points, label)
+    cv2.imshow('ROI',ROI)
+    cv2.waitKey()
+
 
