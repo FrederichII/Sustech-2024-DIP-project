@@ -1,83 +1,108 @@
-import numpy as np
-import cv2 as cv
-
-def preprocess(img):
-    #灰度图
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    #高斯模糊
-    blur = cv.GaussianBlur(gray,(5,5),0)
-    #Sobel算子边缘检测
-    sobel = cv.Sobel(blur,cv.CV_8U,1,0,ksize=3)
-    #二值化
-    ret, binary = cv.threshold(sobel,0,255,cv.THRESH_OTSU + cv.THRESH_BINARY)
-    #腐蚀膨胀
-    element1 = cv.getStructuringElement(cv.MORPH_RECT,(17,5))
-    element2 =cv.getStructuringElement(cv.MORPH_RECT,(20,1))
-    dilation = cv.dilate(binary,element2,iterations=1)
-    erosion = cv.erode(dilation,element1,iterations=1)
-    dilation2 = cv.dilate(erosion,element2,iterations=3)
-    #查找轮廓
-    contours, hierachy = cv.findContours(dilation2, cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE)
-    #筛选出符合条件的轮廓
-    rects = []
-    for i in range(len(contours)):
-        cnt = contours[i]
-        area = cv.contourArea(cnt)
-        x, y,w,h = cv.boundingRect(cnt)
-        if(w < 5 or h < 5 or w/h > 5 or h / w > 5 or area < 100):
-            continue
-        rect = cv.minAreaRect(cnt)
-        rects.append(rect)
-    return contours,rects
-
-def get_ROI(img, rect):
-    center = rect.center
-    size = rect.size
-    angle = rect.angle
-
-    # 将角度转换为弧度
-    theta = angle * (3.141592653589793238462643383279502884 / 180.0)
-
-    # 创建旋转矩阵
-    M = cv.getRotationMatrix2D(center, angle, 1.0)
-
-    # 提取 ROI（感兴趣区域）
-    # 注意：提取的 ROI 尺寸应该大到足够容纳整个旋转矩形
-    roi_width = int(max(size))
-    roi_height = int(min(size))
-    roi = cv.getRectSubPix(img, (roi_width, roi_height), center)
-
-    # 应用仿射变换以纠正旋转
-    corrected_roi = cv.warpAffine(roi, M, (roi_width, roi_height), flags=cv.INTER_LINEAR, borderMode=cv.BORDER_CONSTANT)
-    return corrected_roi
+from PIL import Image, ImageDraw, ImageFont
+import os
 
 
-def find_license_plate(img,rects):
-    # 提取旋转矩形的中心点、尺寸和角度信息
-    for i in range(len(rects)):
-        ROI = get_ROI(img, rects[i])
-        median = np.median(ROI)
+provincelist = [
+    "皖", "沪", "津", "渝", "冀",
+    "晋", "蒙", "辽", "吉", "黑",
+    "苏", "浙", "京", "闽", "赣",
+    "鲁", "豫", "鄂", "湘", "粤",
+    "桂", "琼", "川", "贵", "云",
+    "西", "陕", "甘", "青", "宁",
+    "新"]
 
+wordlist = [
+    "A", "B", "C", "D", "E",
+    "F", "G", "H", "J", "K",
+    "L", "M", "N", "P", "Q",
+    "R", "S", "T", "U", "V",
+    "W", "X", "Y", "Z", "0",
+    "1", "2", "3", "4", "5",
+    "6", "7", "8", "9"]
+
+# --- 绘制边界框
+
+
+def DrawBox(im, box):
+    draw = ImageDraw.Draw(im)
+    draw.rectangle([tuple(box[0]), tuple(box[1])],  outline="#FFFFFF", width=3)
+
+# --- 绘制四个关键点
+
+
+def DrawPoint(im, points):
+
+    draw = ImageDraw.Draw(im)
+
+    for p in points:
+        center = (p[0], p[1])
+        radius = 5
+        right = (center[0]+radius, center[1]+radius)
+        left = (center[0]-radius, center[1]-radius)
+        draw.ellipse((left, right), fill="#FF0000")
+
+# --- 绘制车牌
+
+
+def DrawLabel(im, label):
+    draw = ImageDraw.Draw(im)
+   # draw.multiline_text((30,30), label.encode("utf-8"), fill="#FFFFFF")
+    font = ImageFont.truetype('simsun.ttc', 64)
+    draw.text((30, 30), label, font=font)
+
+# --- 图片可视化
+
+
+def ImgShow(imgpath, box, points, label):
+    # 打开图片
+    im = Image.open(imgpath)
+    DrawBox(im, box)
+    DrawPoint(im, points)
+    DrawLabel(im, label)
+    # 显示图片
+    im.show()
+    im.save('result.jpg')
+
+
+def get_license_info(imgpath):
+    # 图像路径（根据数据库的实际存放路径更改）
+
+    # 图像名
+    imgname = os.path.basename(imgpath).split('.')[0]
+
+    # 根据图像名分割标注
+    _, _, box, points, label, brightness, blurriness = imgname.split('-')
+
+    # --- 边界框信息
+    box = box.split('_')
+    box = [list(map(int, i.split('&'))) for i in box]
+
+    # --- 关键点信息
+    points = points.split('_')
+    points = [list(map(int, i.split('&'))) for i in points]
+    # 将关键点的顺序变为从左上顺时针开始
+    points = points[-2:]+points[:2]
+
+    # --- 读取车牌号
+    label = label.split('_')
+
+    # 省份缩写
+    province = provincelist[int(label[0])]
+
+    # 车牌信息
+    words = [wordlist[int(i)] for i in label[1:]]
+
+    # 车牌号
+    label = province+''.join(words)
+
+    # --- 图片可视化
+    information = {'imgname': imgname, 'box': box, 'points': points, 'label':label}
+    return  information
 
 
 if __name__ == '__main__':
-    img = cv.imread('../image_test2.jpg')
-    contours,rects = preprocess(img)
+    imgpath = 'D:/CCPD2019/ccpd_base/01-86_91-298&341_449&414-458&394_308&410_304&357_454&341-0_0_14_28_24_26_29-124-24.jpg'
+    information = get_license_info(imgpath)
+    [box, points, label] = [information.get('box'), information.get('points'), information.get('label')]
+    ImgShow(imgpath, box, points, label)
 
-    # for i in range(len(rects)):
-    #     box = cv.boxPoints(rects[i])
-    #     box = np.int0(box)
-    #     cv.drawContours(img, [box], 0, (0, 255, 0), 2)
-    box = cv.boxPoints(rects[3])
-    box = np.int0(box)
-    cv.drawContours(img, [box], 0, (0, 255, 0), 2)
-    # cv.drawContours(img, contours, -1, (0,255,0), thickness=None, lineType=None, hierarchy=None, maxLevel=None,offset=None)
-    cv.imshow('img',img)
-    cv.imwrite('../image_test2_processed.jpg',img)
-    print(len(rects),len(rects[0]),len(rects[0][0]))
-    cnt = 0
-    for rect in rects:
-        print(cnt," ",rect)
-        print("\n")
-        cnt +=1
-    cv.waitKey(0)
