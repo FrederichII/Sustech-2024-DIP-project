@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-
+import locating
 
 
 provincelist = [
@@ -124,17 +124,29 @@ def seperate(ROI):
     seg7 = ROI[:,1090:1320]
     return seg1,seg2,seg3,seg4,seg5,seg6,seg7
 
+
 def preprocess(img_directory):
+    i = 1
     for item in os.listdir(img_directory): # 遍历访问待处理图片路径下的每张图片
         item_path = os.path.join(img_directory,item)
-        result_dir = '/home/zhang/DIP/Sustech-2024-DIP-project/result'
-        folder_path = os.path.join(result_dir,item)
-        os.mkdir(folder_path) # 单张图片的预处理结果都放在这个文件夹里（包含7个.jpg文件，7个字符）
-        
-        
+        result_dir = '../result'
+        folder_path = os.path.join(result_dir,str(i))
+        i+=1
+        # if(~os.path.isdir(folder_path)):
+        #     os.mkdir(folder_path) # 单张图片的预处理结果都放在这个文件夹里（包含7个.jpg文件，7个字符）
+        img = cv2.imread(item_path)
+        img = cv2.resize(img, (400, int(400 * img.shape[0] / img.shape[1])))
+        img_copy = img.copy()
+        rect = locating.find_plates(img)
+        plate = img_copy[rect[1]-5:rect[3]+5,rect[0]-5:rect[2]+5]
+        cv2.imshow('plate',plate)
+        # cv2.imshow('img',img)
+        # cv2.rectangle(img, (rect[0] - 5, rect[1] - 5), (rect[2] + 5, rect[3] + 5), (0, 255, 0), 2)
+        # cv2.imshow('after', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
-
-if __name__ == '__main__':
+def ccpd():
     name = '01-86_91-298&341_449&414-458&394_308&410_304&357_454&341-0_0_14_28_24_26_29-124-24.jpg'
     imgpath = '/mnt/d/CCPD2019/ccpd_base/'+name
     information = get_license_info(imgpath)
@@ -176,4 +188,6 @@ if __name__ == '__main__':
     cv2.imshow('seg7',word7)
     cv2.waitKey()
 
+
+preprocess('./preprocess')
 
