@@ -129,7 +129,7 @@ def preprocess(img_directory):
     i = 1
     for item in os.listdir(img_directory): # 遍历访问待处理图片路径下的每张图片
         item_path = os.path.join(img_directory,item)
-        result_dir = '../result'
+        result_dir = './result'
         folder_path = os.path.join(result_dir,str(i))
         i+=1
         # if(~os.path.isdir(folder_path)):
@@ -189,5 +189,5 @@ def ccpd():
     cv2.waitKey()
 
 
-preprocess('./preprocess')
+preprocess('/home/zhang/Sustech-2024-DIP-project/preprocess')
 
