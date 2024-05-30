@@ -189,5 +189,6 @@ def ccpd():
     cv2.waitKey()
 
 
-preprocess('/home/zhang/Sustech-2024-DIP-project/preprocess')
+#preprocess('/home/zhang/Sustech-2024-DIP-project/preprocess')
+ccpd()
 

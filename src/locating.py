@@ -163,7 +163,7 @@ def find_plates(image):
     return rect
 
 def running():
-    file_path = '../preprocess'
+    file_path = './preprocess'
     for filewalks in os.walk(file_path):
         for files in filewalks[2]:
             print('正在处理', os.path.join(filewalks[0], files))
